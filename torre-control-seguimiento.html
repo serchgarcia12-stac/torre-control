@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Torre de Control — Seguimiento Diario</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  :root{
+    --bg:#12161B;
+    --panel:#1B2129;
+    --panel-2:#212933;
+    --line:#2A323C;
+    --text:#EDEFF2;
+    --muted:#8B96A3;
+    --good:#33C481;
+    --warn:#F2B134;
+    --bad:#E8544A;
+    --accent:#4E9BFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:28px 20px 60px;
+  }
+  h1,h2,h3, .label-font{ font-family:'Rajdhani',sans-serif; letter-spacing:.02em; }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+
+  .wrap{ max-width:1180px; margin:0 auto; }
+
+  header{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:14px;}
+  header .title{ display:flex; align-items:center; gap:10px;}
+  header .title .dot{ width:10px;height:10px;border-radius:50%;background:var(--good); box-shadow:0 0 8px var(--good); }
+  header h1{ font-size:26px; font-weight:700; margin:0; text-transform:uppercase;}
+  header .sub{ color:var(--muted); font-size:13px; margin-top:2px;}
+  #fecha-hoy{ font-size:13px; color:var(--muted); }
+
+  .summary{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px; }
+  .summary .card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .summary .card .n{ font-size:30px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+  .summary .card .l{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-top:2px;}
+  .summary .card.good .n{ color:var(--good); }
+  .summary .card.warn .n{ color:var(--warn); }
+  .summary .card.bad .n{ color:var(--bad); }
+
+  section{ margin-bottom:30px; }
+  .section-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .section-head h2{ font-size:14px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); font-weight:600; margin:0; }
+  .section-head .rule{ flex:1; height:1px; background:var(--line); }
+
+  .subgerentes-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .regiones-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+
+  .person-card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .15s; }
+  .person-card:hover{ border-color:#3a4552; }
+  .person-card.active{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+  .person-card .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .person-card .who .nombre{ font-weight:600; font-size:15px; }
+  .person-card .who .rol{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:1px;}
+  .person-card .region-tag{ font-size:10px; color:var(--muted); background:var(--panel-2); border:1px solid var(--line); padding:2px 7px; border-radius:100px; white-space:nowrap;}
+  .cumpl-text{ font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.02em; }
+  .cumpl-text .pct-num{ font-size:14px; }
+  .cumpl-text.good{ color:var(--good); }
+  .cumpl-text.warn{ color:var(--warn); }
+  .cumpl-text.bad{ color:var(--bad); }
+  .cumpl-text.none{ color:var(--muted); }
+
+  .gauge-row{ display:flex; align-items:center; gap:12px; }
+  .gauge-stats{ display:flex; gap:14px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .gauge-stats div{ display:flex; flex-direction:column; align-items:center; }
+  .gauge-stats .num{ font-size:16px; font-weight:700; }
+  .gauge-stats .num.pend{ color:var(--warn); }
+  .gauge-stats .num.venc{ color:var(--bad); }
+  .gauge-stats .lbl{ font-size:9px; color:var(--muted); text-transform:uppercase; }
+
+  .op-toggle{ display:flex; gap:4px; }
+  .op-toggle span{ font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; padding:3px 8px; border-radius:100px; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); cursor:pointer; }
+  .op-toggle span.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .op-badge{ font-size:10px; padding:2px 8px; border-radius:100px; white-space:nowrap; font-weight:600; }
+  .op-badge.atum{ background:rgba(78,155,255,.15); color:var(--accent); }
+  .op-badge.atis{ background:rgba(155,110,230,.18); color:#B08CF0; }
+  .op-badge.general{ background:var(--panel-2); color:var(--muted); border:1px solid var(--line); }
+
+  .provider-card{ background:var(--panel); border:1px dashed #3c4956; border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; cursor:pointer; }
+  .provider-card.active{ border-color:var(--accent); border-style:solid; }
+  .provider-card .who .nombre{ font-size:17px; font-weight:700; }
+  .provider-card .who .rol{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+
+  .reminders{ background:var(--panel); border:1px solid var(--warn); border-left:4px solid var(--warn); border-radius:10px; padding:16px 18px; margin-bottom:26px; }
+  .reminders.empty-ok{ border-color:var(--line); border-left-color:var(--good); }
+  .reminders h3{ margin:0 0 10px; font-size:12.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--warn); font-weight:700; }
+  .reminders.empty-ok h3{ color:var(--good); }
+  .reminder-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; flex-wrap:wrap; }
+  .reminder-item:last-child{ border-bottom:none; }
+  .reminder-item .who{ font-weight:600; white-space:nowrap; }
+  .reminder-item .desc{ color:var(--muted); flex:1; min-width:160px; }
+  .notif-btn{ font-size:11.5px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); cursor:pointer; margin-top:10px; }
+  .notif-btn:hover{ border-color:var(--accent); }
+
+  .personal-panel{ border-color:#3a2f52 !important; }
+  .personal-badge{ font-size:9.5px; padding:2px 9px; border-radius:100px; background:rgba(176,140,240,.15); color:#B08CF0; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .op-toggle span.fixed{ cursor:default; }
+
+  .role-gate{ max-width:640px; margin:40px auto; }
+  .role-card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px 28px; }
+  .role-card h2{ margin:0 0 6px; font-size:20px; }
+  .role-card p{ color:var(--muted); font-size:13.5px; margin:0 0 20px; line-height:1.5; }
+  .role-option{ display:block; width:100%; text-align:left; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px; cursor:pointer; color:var(--text); font-family:'Inter',sans-serif; }
+  .role-option:hover{ border-color:var(--accent); }
+  .role-option b{ display:block; font-size:14.5px; margin-bottom:2px; }
+  .role-option span{ font-size:12px; color:var(--muted); }
+  .role-back{ background:none; border:none; color:var(--muted); font-size:12.5px; cursor:pointer; margin-bottom:14px; padding:0; }
+  .role-back:hover{ color:var(--text); }
+
+  /* form */
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  .form-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .field{ display:flex; flex-direction:column; gap:5px; flex:1; min-width:150px; }
+  .field label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  select, input[type=date], textarea, input[type=text]{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:9px 10px; font-family:'Inter',sans-serif; font-size:13.5px; outline:none;
+  }
+  select:focus, input:focus, textarea:focus{ border-color:var(--accent); }
+  textarea{ resize:vertical; min-height:44px; font-family:'Inter',sans-serif; }
+  .desc-wrap{ position:relative; flex:2; min-width:240px; }
+  .mic-btn{
+    position:absolute; right:8px; bottom:8px; width:30px;height:30px;border-radius:50%;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.15s;
+  }
+  .mic-btn:hover{ color:var(--text); }
+  .mic-btn.listening{ background:var(--bad); color:#fff; border-color:var(--bad); animation:pulse 1.1s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(232,84,74,.5);} 100%{box-shadow:0 0 0 9px rgba(232,84,74,0);} }
+
+  .add-btn{
+    background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 22px;
+    font-weight:600; font-size:13.5px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .add-btn:hover{ filter:brightness(1.08); }
+  .hint{ font-size:11.5px; color:var(--muted); margin-top:8px; }
+
+  /* table */
+  .filters{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
+  .chip{ font-size:12px; padding:6px 13px; border-radius:100px; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); cursor:pointer; }
+  .chip.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  select#filtroPersona{ margin-left:auto; }
+
+  table{ width:100%; border-collapse:collapse; }
+  th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); }
+  td{ padding:10px 10px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:top; }
+  tr:last-child td{ border-bottom:none; }
+  .estado-badge{ font-size:10.5px; padding:3px 9px; border-radius:100px; text-transform:uppercase; letter-spacing:.04em; font-weight:600; white-space:nowrap; }
+  .estado-badge.pendiente{ background:rgba(242,177,52,.15); color:var(--warn); }
+  .estado-badge.vencido{ background:rgba(232,84,74,.15); color:var(--bad); }
+  .estado-badge.completado{ background:rgba(51,196,129,.15); color:var(--good); }
+  .row-actions{ display:flex; gap:6px; }
+  .row-actions button{ border:1px solid var(--line); background:var(--panel-2); color:var(--muted); border-radius:6px; padding:5px 9px; font-size:11.5px; cursor:pointer; }
+  .row-actions button:hover{ color:var(--text); }
+  .row-actions button.done:hover{ color:var(--good); border-color:var(--good); }
+  .row-actions button.del:hover{ color:var(--bad); border-color:var(--bad); }
+  .empty{ text-align:center; color:var(--muted); padding:26px; font-size:13px; }
+
+  .sync-bar{ display:flex; align-items:center; gap:10px; margin:-6px 0 12px; flex-wrap:wrap; }
+  .sync-bar .hint{ margin:0; }
+  .refresh-btn{ font-size:11.5px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); cursor:pointer; }
+  .refresh-btn:hover{ border-color:var(--accent); }
+
+  .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 18px; font-size:13px; z-index:1000; box-shadow:0 6px 20px rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:opacity .2s; }
+  .toast.show{ opacity:1; }
+  .toast.ok{ border-color:var(--good); color:var(--good); }
+  .toast.error{ border-color:var(--bad); color:var(--bad); }
+
+  .cat-details{ background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+  .cat-details summary{ cursor:pointer; padding:13px 16px; font-weight:600; font-size:13.5px; list-style:none; display:flex; align-items:center; gap:10px; }
+  .cat-details summary::-webkit-details-marker{ display:none; }
+  .cat-details summary::before{ content:'▸'; color:var(--muted); transition:transform .15s; }
+  .cat-details[open] summary::before{ transform:rotate(90deg); }
+  .cat-count{ font-family:'JetBrains Mono',monospace; font-size:11px; background:var(--panel-2); border:1px solid var(--line); padding:2px 9px; border-radius:100px; color:var(--muted); }
+  .cat-details-body{ padding:0 16px 14px; }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:2000; padding:20px; }
+  .modal-box{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px 24px; max-width:400px; width:100%; }
+  .modal-box h3{ margin:0 0 6px; font-size:16px; }
+  .modal-box input{ width:100%; margin-top:4px; font-size:16px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .modal-actions .add-btn{ width:auto; padding:9px 20px; font-size:13px; }
+
+  #tablaWrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ min-width:600px; }
+
+  @media (max-width:640px){
+    body{ padding:16px 12px 50px; }
+    header{ align-items:flex-start; }
+    header h1{ font-size:20px; }
+    header .sub{ font-size:12px; }
+
+    .summary{ grid-template-columns:repeat(2,1fr); gap:8px; }
+    .summary .card{ padding:12px; }
+    .summary .card .n{ font-size:22px; }
+
+    .subgerentes-row, .regiones-row{ grid-template-columns:1fr; }
+
+    .filters{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+    .filters .chip{ flex:0 0 auto; padding:8px 14px; }
+    select#filtroPersona{ margin-left:0; }
+    .filters select{ flex:0 0 auto; min-width:150px; }
+
+    .form-row{ flex-direction:column; }
+    .field{ min-width:0; }
+    .desc-wrap{ flex:none; min-width:0; }
+    textarea{ min-height:64px; font-size:16px; }
+    select, input[type=date]{ font-size:16px; padding:11px 12px; }
+    .mic-btn{ width:38px; height:38px; }
+    .add-btn{ width:100%; padding:13px 22px; font-size:14.5px; }
+
+    .op-toggle span{ padding:6px 11px; font-size:10.5px; }
+    .gauge-stats{ gap:10px; }
+
+    /* bitácora: tabla -> tarjetas apiladas, mucho más fácil de leer y tocar en celular */
+    table, thead, tbody, tr{ display:block; width:100%; }
+    thead{ display:none; }
+    table{ min-width:0; }
+    tr{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; margin-bottom:10px; padding:10px 14px; }
+    td{ display:block; width:100%; border-bottom:none; padding:6px 0; }
+    td::before{ content:attr(data-label); display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:3px; }
+    td:last-child{ padding-top:10px; }
+    .row-actions{ flex-wrap:wrap; }
+    .row-actions button{ flex:1; padding:9px; font-size:12.5px; }
+
+    .role-gate{ margin:16px auto; }
+    .role-card{ padding:20px 18px; }
+    .role-option{ padding:15px 16px; }
+
+    .reminder-item{ flex-direction:column; align-items:flex-start; gap:6px; padding:10px 0; }
+    .reminder-item .desc{ min-width:0; }
+    .personal-panel .form-row{ gap:14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="title"><span class="dot"></span><h1>Torre de Control — Seguimiento Diario</h1></div>
+      <div class="sub">Cumplimiento de subgerentes, coordinadores y proveedor AUTOEXPRESS</div>
+      <div class="sub" id="rolActualLinea" style="margin-top:4px;"></div>
+    </div>
+    <div id="fecha-hoy" class="mono"></div>
+  </header>
+
+  <div id="roleGate"></div>
+
+  <div id="mainContent" style="display:none;">
+  <div id="remindersBox"></div>
+
+  <div class="summary">
+    <div class="card good"><div class="n mono" id="sumCumplimiento">—</div><div class="l">Cumplimiento general</div></div>
+    <div class="card warn"><div class="n mono" id="sumPendientes">0</div><div class="l">Pendientes activos</div></div>
+    <div class="card bad"><div class="n mono" id="sumVencidos">0</div><div class="l">Vencidos</div></div>
+    <div class="card"><div class="n mono" id="sumTotal">0</div><div class="l">Tareas registradas</div></div>
+  </div>
+
+  <section id="secResumenCategoria">
+    <div class="section-head"><h2>Resumen por categoría</h2><div class="rule"></div></div>
+    <div class="panel">
+      <div class="filters">
+        <span class="chip cat-chip active" data-cat="total">Total General</span>
+        <span class="chip cat-chip" data-cat="operacion3">III Servicios Operación</span>
+        <span class="chip cat-chip" data-cat="autoexpress">AUTOEXPRESS</span>
+        <span class="chip cat-chip" data-cat="scania">SCANIA</span>
+        <span class="chip cat-chip" data-cat="heil">HEIL</span>
+      </div>
+      <div class="filters" style="margin-bottom:16px;">
+        <span class="chip flota-chip active" data-flota="total">Toda la flota</span>
+        <span class="chip flota-chip" data-flota="atum">ATUM (Última Milla)</span>
+        <span class="chip flota-chip" data-flota="atis">ATIS (Traspasos)</span>
+      </div>
+      <div id="resumenCategoriaCard"></div>
+    </div>
+  </section>
+
+  <section id="secSubgerentes">
+    <div class="section-head"><h2>Subgerentes</h2><div class="rule"></div></div>
+    <div class="subgerentes-row" id="subgerentesRow"></div>
+  </section>
+
+  <section id="secCoordRegion">
+    <div class="section-head"><h2>Coordinadores por región</h2><div class="rule"></div></div>
+    <div class="regiones-row" id="regionesRow"></div>
+  </section>
+
+  <section id="secCoordGeneral">
+    <div class="section-head"><h2>Coordinadores generales (todas las regiones)</h2><div class="rule"></div></div>
+    <div class="regiones-row" id="generalesRow"></div>
+  </section>
+
+  <section id="secProveedor">
+    <div id="bloqueAutoexpress">
+      <div class="section-head"><h2>Proveedor</h2><div class="rule"></div></div>
+      <div id="providerRow"></div>
+      <div class="regiones-row" id="providerRepsRow" style="margin-top:14px;"></div>
+
+      <div class="section-head" style="margin-top:22px;"><h2>ARMAS — Refaccionamiento (tercero)</h2><div class="rule"></div></div>
+      <div id="armasRow"></div>
+      <div class="section-head" style="margin-top:14px;"><h2 style="font-size:11.5px;">Almacenes (nacional)</h2><div class="rule"></div></div>
+      <div class="regiones-row" id="armasAlmacenesRow"></div>
+      <div class="section-head" style="margin-top:14px;"><h2 style="font-size:11.5px;">Operativos (día a día)</h2><div class="rule"></div></div>
+      <div class="regiones-row" id="armasOperativosRow"></div>
+    </div>
+
+    <div id="bloqueOtrosProveedores">
+      <div class="section-head" style="margin-top:22px;"><h2>Otros proveedores (solo Traspasos / ATIS)</h2><div class="rule"></div></div>
+      <div class="regiones-row" id="otrosProveedoresRow"></div>
+    </div>
+  </section>
+
+  <section id="secRegistrar">
+    <div class="section-head"><h2>Registrar pendiente</h2><div class="rule"></div></div>
+    <div class="panel">
+      <div class="form-row">
+        <div class="field" style="max-width:220px;">
+          <label>Persona / Proveedor</label>
+          <select id="fPersona"></select>
+        </div>
+        <div class="field" style="max-width:190px;">
+          <label>Operación</label>
+          <select id="fOperacion">
+            <option value="general">General</option>
+            <option value="atum">ATUM (Última Milla)</option>
+            <option value="atis">ATIS (Traspasos)</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:170px;">
+          <label>Fecha compromiso</label>
+          <input type="date" id="fFecha">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field desc-wrap">
+          <label>Descripción del pendiente</label>
+          <textarea id="fDesc" placeholder="Escribe o dicta el pendiente…"></textarea>
+          <button type="button" class="mic-btn" id="micBtn" title="Dictar por voz">🎤</button>
+        </div>
+      </div>
+      <button class="add-btn" id="addBtn">Registrar pendiente</button>
+      <div class="hint" id="micHint"></div>
+    </div>
+  </section>
+
+  <section id="secBitacora">
+    <div class="section-head"><h2>Bitácora</h2><div class="rule"></div></div>
+    <div class="hint" style="margin:-6px 0 8px;">📌 La bitácora es un historial permanente: los registros no se eliminan, solo se marcan como completados.</div>
+    <div class="sync-bar">
+      <span class="hint" id="ultimaActualizacion">—</span>
+      <button class="refresh-btn" id="btnActualizar">🔄 Actualizar ahora</button>
+    </div>
+    <div class="panel">
+      <div class="filters">
+        <span class="chip active" data-f="todos">Todos</span>
+        <span class="chip" data-f="abiertos">Abiertos (pend. + venc.)</span>
+        <span class="chip" data-f="pendiente">Pendientes</span>
+        <span class="chip" data-f="vencido">Vencidos</span>
+        <span class="chip" data-f="completado">Completados</span>
+        <select id="filtroPersona"><option value="todos">Toda persona/proveedor</option></select>
+        <select id="filtroOperacion">
+          <option value="todas">Toda operación</option>
+          <option value="atum">ATUM (Última Milla)</option>
+          <option value="atis">ATIS (Traspasos)</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+      <div id="tablaWrap"></div>
+    </div>
+  </section>
+  <section class="personal-section" id="secMisPendientes">
+    <div class="section-head"><h2>Mis pendientes <span class="personal-badge">No se miden</span></h2><div class="rule"></div></div>
+    <div id="personalLockScreen"></div>
+    <div id="personalContent" style="display:none;">
+      <div class="panel personal-panel">
+        <div class="form-row" style="align-items:center; justify-content:space-between; margin-bottom:4px;">
+          <span class="hint" style="margin:0;">Solo tú puedes ver, agregar, editar y borrar lo que hay aquí.</span>
+          <button class="notif-btn" id="btnBloquearPersonal" style="margin:0;">🔒 Bloquear esta sección</button>
+        </div>
+        <div class="form-row">
+          <div class="field desc-wrap">
+            <label>Pendiente personal</label>
+            <textarea id="pDesc" placeholder="Escribe o dicta tu pendiente…"></textarea>
+            <button type="button" class="mic-btn" id="micBtnPersonal" title="Dictar por voz">🎤</button>
+          </div>
+          <div class="field" style="max-width:170px;">
+            <label>Fecha compromiso</label>
+            <input type="date" id="pFecha">
+          </div>
+        </div>
+        <button class="add-btn" id="addBtnPersonal" style="background:#B08CF0;">Registrar pendiente personal</button>
+        <div class="hint" id="micHintPersonal"></div>
+        <div id="personalListWrap" style="margin-top:16px;"></div>
+      </div>
+    </div>
+  </section>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="appModal"></div>
+
+<script>
+// ============================================================
+// CONEXIÓN CON GOOGLE SHEETS (reemplaza el almacenamiento de Claude)
+// Pega aquí la URL de tu Google Apps Script Web App (ver instrucciones)
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbxvw6Nc2iY8TegTW2uMblz7ameKkJPAwgzfoHabLYpz-1NunDEdKvbW6-fr9USFkou_mw/exec';
+
+async function apiGet(key){
+  const res = await fetch(`${API_URL}?key=${encodeURIComponent(key)}&t=${Date.now()}`, {cache:'no-store'});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  return data && data.value ? data.value : null;
+}
+async function apiSet(key, value){
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS que Apps Script no maneja bien
+    body: JSON.stringify({key, value})
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return true;
+}
+// localStorage: datos privados de este navegador/dispositivo (rol elegido, pendientes personales, su clave)
+function lsGet(key){
+  try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function lsSet(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+}
+
+const OPERACIONES = {
+  atum: 'ATUM (Última Milla)',
+  atis: 'ATIS (Traspasos)',
+  general: 'General'
+};
+const PERSONAS = [
+  {id:'joao_crespo',      nombre:'Joao Crespo',      rol:'Subgerente',   region:'Pacífico · Norte · Golfo', grupo:'subgerente', opMode:'toggle'},
+  {id:'alberto_amador',   nombre:'Alberto Amador',   rol:'Subgerente',   region:'Centro · Valle de México', grupo:'subgerente', opMode:'toggle'},
+  {id:'luis_vargas',      nombre:'Luis Vargas',      rol:'Coordinador',  region:'Pacífico',        grupo:'coordinador', opMode:'toggle'},
+  {id:'jorge_castillo',   nombre:'Jorge Castillo',   rol:'Coordinador',  region:'Norte',           grupo:'coordinador', opMode:'toggle'},
+  {id:'jhon_jairo',       nombre:'Jhon Jairo',       rol:'Coordinador',  region:'Golfo',           grupo:'coordinador', opMode:'toggle'},
+  {id:'erick_lopez',      nombre:'Erick Lopez',      rol:'Coordinador',  region:'Centro',          grupo:'coordinador', opMode:'toggle'},
+  {id:'emmanuel_valdez',  nombre:'Emmanuel Valdez',  rol:'Coordinador',  region:'Valle de México', grupo:'coordinador', opMode:'toggle'},
+  {id:'eder_osmar',       nombre:'Eder Osmar',       rol:'Coordinador',  region:'Todas las regiones', grupo:'coordinador_general', opMode:'none', nota:'Calendariza lavado, sanitizado y mantenimiento preventivo/correctivo de patines de calibración, y tareas asignadas según necesidad.'},
+  {id:'german_ramirez',   nombre:'German Ramirez',   rol:'Coordinador',  region:'Todas las regiones', grupo:'coordinador_general', opMode:'none', nota:'Monitoreo de toda la flota. Reporta directo.'},
+  {id:'autoexpress',      nombre:'AUTOEXPRESS',      rol:'Proveedor',    region:'General',         grupo:'proveedor', opMode:'toggle'},
+  {id:'ae_vdm_atis',      nombre:'Nancy Marcelo',    rol:'Rep. AUTOEXPRESS', region:'Valle de México', grupo:'proveedor_rep', opMode:'fixed', opFija:'atis'},
+  {id:'ae_vdm_atum',      nombre:'Bryan Colín',      rol:'Rep. AUTOEXPRESS', region:'Valle de México', grupo:'proveedor_rep', opMode:'fixed', opFija:'atum'},
+  {id:'ae_centro_atum',   nombre:'Alfonso Clemente', rol:'Rep. AUTOEXPRESS', region:'Centro',          grupo:'proveedor_rep', opMode:'fixed', opFija:'atum'},
+  {id:'ae_centro_atis',   nombre:'Nancy Marcelo',    rol:'Rep. AUTOEXPRESS', region:'Centro',          grupo:'proveedor_rep', opMode:'fixed', opFija:'atis'},
+  {id:'ae_golfo',         nombre:'Joel Barranco',    rol:'Rep. AUTOEXPRESS', region:'Golfo',           grupo:'proveedor_rep', opMode:'toggle'},
+  {id:'ae_norte',         nombre:'Emmanuel Ruben',   rol:'Rep. AUTOEXPRESS', region:'Norte',           grupo:'proveedor_rep', opMode:'toggle'},
+  {id:'ae_pacifico_atum', nombre:'Paola',            rol:'Rep. AUTOEXPRESS', region:'Pacífico',        grupo:'proveedor_rep', opMode:'fixed', opFija:'atum'},
+  {id:'ae_pacifico_atis', nombre:'Jeovana',          rol:'Rep. AUTOEXPRESS', region:'Pacífico',        grupo:'proveedor_rep', opMode:'fixed', opFija:'atis'},
+  {id:'tecnicos_camionetas', nombre:'Técnicos y Camionetas', rol:'Rep. AUTOEXPRESS', region:'Todas las regiones', grupo:'proveedor_rep', opMode:'toggle'},
+  {id:'armas',            nombre:'ARMAS',            rol:'Tercero · Refaccionamiento', region:'Nacional', grupo:'proveedor_armas', opMode:'toggle', nota:'Atiende a AUTOEXPRESS como tercero de refaccionamiento. Junto con sus almacenes, atiende ambas flotas (ATUM y ATIS).'},
+  {id:'armas_mty',        nombre:'Monterrey',        rol:'Almacén ARMAS',    region:'Monterrey',       grupo:'armas_almacen', opMode:'toggle'},
+  {id:'armas_castillo',   nombre:'El Castillo',      rol:'Almacén ARMAS',    region:'El Castillo',     grupo:'armas_almacen', opMode:'toggle'},
+  {id:'armas_vhsa',       nombre:'Villahermosa',     rol:'Almacén ARMAS',    region:'Villahermosa',    grupo:'armas_almacen', opMode:'toggle'},
+  {id:'armas_rosarito',   nombre:'Rosarito',         rol:'Almacén ARMAS',    region:'Rosarito',        grupo:'armas_almacen', opMode:'toggle'},
+  {id:'armas_operativos', nombre:'ARMAS — Operativos', rol:'Pendientes operativos', region:'Nacional', grupo:'armas_operativo', opMode:'toggle', nota:'Pendientes operativos diversos del día a día.'},
+  {id:'scania',           nombre:'SCANIA',           rol:'Proveedor',        region:'General',         grupo:'proveedor_otros', opMode:'fixed', opFija:'atis', nota:'25 tractocamiones asignados.'},
+  {id:'heil',             nombre:'HEIL',             rol:'Proveedor',        region:'General',         grupo:'proveedor_otros', opMode:'fixed', opFija:'atis', nota:'50 toneles asignados.'},
+];
+const GRUPOS_LABEL = {
+  subgerente:'Subgerentes', coordinador:'Coordinadores por región', coordinador_general:'Coordinadores generales',
+  proveedor:'Proveedor (general)', proveedor_rep:'Proveedor AUTOEXPRESS — por zona',
+  proveedor_armas:'ARMAS (general)', armas_almacen:'ARMAS — Almacenes', armas_operativo:'ARMAS — Operativos',
+  proveedor_otros:'Otros proveedores'
+};
+const GRUPOS_ORDEN = ['subgerente','coordinador','coordinador_general','proveedor','proveedor_rep','proveedor_armas','armas_almacen','armas_operativo','proveedor_otros'];
+const REGIONES = [
+  {region:'Pacífico',        subgerente:'joao_crespo',    coordinador:'luis_vargas'},
+  {region:'Norte',           subgerente:'joao_crespo',    coordinador:'jorge_castillo'},
+  {region:'Golfo',           subgerente:'joao_crespo',    coordinador:'jhon_jairo'},
+  {region:'Centro',          subgerente:'alberto_amador', coordinador:'erick_lopez'},
+  {region:'Valle de México', subgerente:'alberto_amador', coordinador:'emmanuel_valdez'},
+];
+
+let tareas = [];
+let personales = [];
+let filtroEstado = 'todos';
+let filtroPersonaId = 'todos';
+let filtroOperacion = 'todas';
+let personaSeleccionada = 'joao_crespo';
+let notifShown = false;
+let miRol = null; // {tipo:'admin'|'subgerente'|'coordinador'|'proveedor'|'invitado', id, nombre}
+
+const STORAGE_KEY = 'tareas_seguimiento_v1';
+const STORAGE_KEY_PERSONAL = 'pendientes_personales_v1';
+const STORAGE_KEY_PERSONAL_PIN = 'personal_pin_hash_v1';
+const STORAGE_KEY_ROL = 'mi_rol_v1';
+const STORAGE_KEY_ADMIN_PIN = 'admin_principal_pin_hash_v1';
+const hoy = () => new Date().toISOString().slice(0,10);
+let personalPinHash = null;
+let personalDesbloqueado = false;
+
+function personaNombre(id){ const p = PERSONAS.find(p=>p.id===id); return p? p.nombre : id; }
+
+async function sha256Hex(texto){
+  if(typeof crypto === 'undefined' || !crypto.subtle){
+    throw new Error('crypto.subtle no disponible en este entorno (archivo abierto fuera de Claude, sin conexión segura)');
+  }
+  const enc = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function mostrarToast(msg, tipo){
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.className = 'toast show ' + (tipo||'');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className = 'toast ' + (tipo||''); }, 3200);
+}
+
+// Reemplaza al prompt() nativo, que puede estar bloqueado dentro del entorno del artefacto.
+// Devuelve el texto ingresado, o null si se cancela.
+function pedirTexto(titulo, mensaje, valorInicial, tipoInput){
+  return new Promise(resolve=>{
+    const modal = document.getElementById('appModal');
+    modal.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal-box">
+          <h3>${titulo}</h3>
+          <p class="hint" style="margin:0 0 10px;">${mensaje||''}</p>
+          <input type="${tipoInput||'text'}" id="modalInput" value="${valorInicial||''}">
+          <div class="modal-actions">
+            <button id="modalCancel" class="refresh-btn">Cancelar</button>
+            <button id="modalOk" class="add-btn">Aceptar</button>
+          </div>
+        </div>
+      </div>`;
+    const input = document.getElementById('modalInput');
+    setTimeout(()=>{ input.focus(); if(input.select) input.select(); }, 30);
+    const cerrar = (val)=>{ modal.innerHTML=''; resolve(val); };
+    document.getElementById('modalOk').addEventListener('click', ()=>cerrar(input.value));
+    document.getElementById('modalCancel').addEventListener('click', ()=>cerrar(null));
+    input.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); cerrar(input.value); }
+      if(e.key==='Escape'){ cerrar(null); }
+    });
+  });
+}
+
+function marcarHoraActualizacion(){
+  const el = document.getElementById('ultimaActualizacion');
+  if(el) el.textContent = 'Última actualización: ' + new Date().toLocaleTimeString('es-MX');
+}
+
+async function cargar(){
+  // tareas: en la hoja de Google Sheets COMPARTIDA, visible y editable por todo el equipo
+  try{
+    const v = await apiGet(STORAGE_KEY);
+    tareas = v ? JSON.parse(v) : [];
+  }catch(e){ tareas = []; mostrarToast('⚠ No se pudo conectar con la base de datos. Revisa tu conexión a internet.', 'error'); }
+  // pendientes personales: privados de este navegador/dispositivo (localStorage)
+  personales = lsGet(STORAGE_KEY_PERSONAL) || [];
+  // clave de acceso a "Mis pendientes": también privada de este dispositivo
+  personalPinHash = lsGet(STORAGE_KEY_PERSONAL_PIN) || null;
+  marcarHoraActualizacion();
+  render();
+}
+
+// Vuelve a traer la bitácora compartida (para reflejar lo que registraron otros).
+// silencioso=true: usado por el sondeo automático, no interrumpe con avisos si no hay cambios.
+async function refrescarDatosCompartidos(silencioso){
+  try{
+    const v = await apiGet(STORAGE_KEY);
+    const nuevas = v ? JSON.parse(v) : [];
+    const cambiaron = JSON.stringify(nuevas) !== JSON.stringify(tareas);
+    tareas = nuevas;
+    marcarHoraActualizacion();
+    if(cambiaron || !silencioso) render();
+    if(!silencioso) mostrarToast(cambiaron ? '✓ Actualizado — hay cambios nuevos' : '✓ Ya estás al día, sin cambios nuevos', 'ok');
+  }catch(e){
+    if(!silencioso) mostrarToast('⚠ No se pudo actualizar. Revisa tu conexión a internet.', 'error');
+  }
+}
+
+async function guardar(silencioso){
+  try{
+    await apiSet(STORAGE_KEY, JSON.stringify(tareas));
+    marcarHoraActualizacion();
+    if(!silencioso) mostrarToast('✓ Guardado', 'ok');
+  }catch(e){
+    console.error('Error guardando', e);
+    mostrarToast('⚠ No se guardó. Revisa tu conexión a internet.', 'error');
+  }
+}
+async function guardarPersonales(){
+  lsSet(STORAGE_KEY_PERSONAL, personales);
+}
+
+function estadoReal(t){
+  if(t.estado === 'completado') return 'completado';
+  if(t.fechaCompromiso && t.fechaCompromiso < hoy()) return 'vencido';
+  return 'pendiente';
+}
+
+let opFiltroCard = {}; // personaId -> 'total' | 'atum' | 'atis' | 'general'
+
+function statsForIds(ids, operacion){
+  let propias = ids===null ? tareas.slice() : tareas.filter(t=>ids.includes(t.personaId));
+  if(operacion && operacion!=='total'){
+    propias = propias.filter(t=> (t.operacion||'general') === operacion);
+  }
+  const total = propias.length;
+  const completados = propias.filter(t=>estadoReal(t)==='completado').length;
+  const vencidos = propias.filter(t=>estadoReal(t)==='vencido').length;
+  const pendientes = propias.filter(t=>estadoReal(t)==='pendiente').length;
+  const pct = total===0 ? null : Math.round((completados/total)*100);
+  return {total, completados, vencidos, pendientes, pct};
+}
+function statsFor(id, operacion){ return statsForIds([id], operacion); }
+
+function gaugeSVG(pct, size=64){
+  const p = pct===null ? 0 : pct;
+  const color = p>=80 ? 'var(--good)' : p>=50 ? 'var(--warn)' : 'var(--bad)';
+  const r = 26, cx=32, cy=32;
+  const circ = Math.PI * r; // half circumference (semi-circle arc length)
+  const startAngle = 180, sweep = 180 * (p/100);
+  const off = circ - (circ * (p/100));
+  return `
+  <svg width="${size}" height="${size*0.62}" viewBox="0 0 64 40" style="overflow:visible">
+    <path d="M 6 34 A 26 26 0 0 1 58 34" fill="none" stroke="#2A323C" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 6 34 A 26 26 0 0 1 58 34" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+      stroke-dasharray="${circ}" stroke-dashoffset="${off}"/>
+    <text x="32" y="30" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="${p===null?'#8B96A3':'#EDEFF2'}">${pct===null?'—':pct+'%'}</text>
+  </svg>`;
+}
+
+function personCardHTML(p){
+  let statsOp = 'total', opUI = '';
+  if(p.opMode==='toggle'){
+    const opSel = opFiltroCard[p.id] || 'total';
+    statsOp = opSel;
+    opUI = `
+    <div class="op-toggle" data-toggle-for="${p.id}">
+      <span data-op="total" class="${opSel==='total'?'active':''}">Total</span>
+      <span data-op="atum" class="${opSel==='atum'?'active':''}">ATUM</span>
+      <span data-op="atis" class="${opSel==='atis'?'active':''}">ATIS</span>
+    </div>`;
+  } else if(p.opMode==='fixed'){
+    statsOp = p.opFija;
+    opUI = `
+    <div class="op-toggle">
+      <span class="active fixed">${OPERACIONES[p.opFija]}</span>
+    </div>`;
+  }
+  const s = statsFor(p.id, statsOp);
+  const active = personaSeleccionada===p.id ? ' active' : '';
+  const cls = s.pct===null ? 'none' : s.pct>=80 ? 'good' : s.pct>=50 ? 'warn' : 'bad';
+  const pctTxt = s.pct===null ? 'Sin datos' : `<span class="pct-num">${s.pct}%</span> cumplimiento`;
+  const nota = p.nota ? `<div style="font-size:11px;color:var(--muted);line-height:1.4;">${p.nota}</div>` : '';
+  return `
+  <div class="person-card${active}" data-id="${p.id}">
+    <div class="top">
+      <div class="who"><div class="nombre">${p.nombre}</div><div class="rol">${p.rol}</div></div>
+      <div class="region-tag">${p.region}</div>
+    </div>
+    ${opUI}
+    <div class="gauge-row">
+      ${gaugeSVG(s.pct)}
+      <div class="gauge-stats">
+        <div><span class="num pend">${s.pendientes}</span><span class="lbl">Pend.</span></div>
+        <div><span class="num venc">${s.vencidos}</span><span class="lbl">Venc.</span></div>
+        <div><span class="num" style="color:var(--good)">${s.completados}</span><span class="lbl">OK</span></div>
+      </div>
+    </div>
+    <div class="cumpl-text ${cls}">${pctTxt}</div>
+    ${nota}
+  </div>`;
+}
+
+function renderRecordatorios(){
+  const t = hoy();
+  const idsRol = idsVisiblesParaRol();
+  const esProveedor = miRol && miRol.tipo==='proveedor';
+  const medidos = tareas.filter(x=> x.fechaCompromiso===t && estadoReal(x)!=='completado' && (!idsRol || idsRol.includes(x.personaId)));
+  const personalesHoy = esProveedor ? [] : personales.filter(x=> x.fechaCompromiso===t && estadoReal(x)!=='completado');
+  const totalHoy = medidos.length + (personalDesbloqueado ? personalesHoy.length : 0);
+  const box = document.getElementById('remindersBox');
+
+  if(totalHoy===0 && personalesHoy.length===0){
+    box.innerHTML = `<div class="reminders empty-ok"><h3>✓ Sin compromisos vencen hoy</h3></div>`;
+    return;
+  }
+  const filasMedidos = medidos.map(x=>`
+    <div class="reminder-item">
+      <span class="who">${personaNombre(x.personaId)}</span>
+      <span class="desc">${x.descripcion}</span>
+      <span class="op-badge ${x.operacion||'general'}">${OPERACIONES[x.operacion||'general']}</span>
+    </div>`).join('');
+  const filasPersonales = personalDesbloqueado ? personalesHoy.map(x=>`
+    <div class="reminder-item">
+      <span class="who">Tú (personal)</span>
+      <span class="desc">${x.descripcion}</span>
+      <span class="personal-badge">No se mide</span>
+    </div>`).join('') : (personalesHoy.length>0 ? `
+    <div class="reminder-item">
+      <span class="who">Tú (personal)</span>
+      <span class="desc" style="font-style:italic;">${personalesHoy.length} pendiente(s) privado(s) — desbloquea "Mis pendientes" para verlos</span>
+    </div>` : '');
+
+  let notifBtn = '';
+  if('Notification' in window && Notification.permission==='default'){
+    notifBtn = `<button class="notif-btn" id="activarNotif">Activar notificaciones del navegador</button>`;
+  }
+
+  box.innerHTML = `
+    <div class="reminders">
+      <h3>⏰ Vencen hoy (${medidos.length + personalesHoy.length})</h3>
+      ${filasMedidos}${filasPersonales}
+      ${notifBtn}
+    </div>`;
+
+  const btn = document.getElementById('activarNotif');
+  if(btn) btn.addEventListener('click', ()=> Notification.requestPermission());
+
+  if(!notifShown && 'Notification' in window && Notification.permission==='granted'){
+    try{ new Notification('Torre de Control — recordatorios de hoy', {body:`${medidos.length + personalesHoy.length} pendiente(s) comprometidos para hoy.`}); }catch(e){}
+    notifShown = true;
+  }
+}
+
+let categoriaResumen = 'total';
+let flotaResumen = 'total';
+
+function idsParaCategoria(cat){
+  if(cat==='total') return null;
+  if(cat==='operacion3') return PERSONAS.filter(p=>['subgerente','coordinador','coordinador_general'].includes(p.grupo)).map(p=>p.id);
+  if(cat==='autoexpress') return PERSONAS.filter(p=>['proveedor','proveedor_rep','proveedor_armas','armas_almacen','armas_operativo'].includes(p.grupo)).map(p=>p.id);
+  if(cat==='scania') return ['scania'];
+  if(cat==='heil') return ['heil'];
+  return null;
+}
+
+// ---------- Roles y permisos ----------
+function permisos(){
+  if(!miRol) return {puedeRegistrar:false, puedeCompletar:false, gruposAsignables:[], esProveedor:false};
+  if(miRol.tipo==='admin') return {puedeRegistrar:true, puedeCompletar:true, gruposAsignables:'todos', esProveedor:false};
+  if(miRol.tipo==='subgerente') return {puedeRegistrar:true, puedeCompletar:true, gruposAsignables:['coordinador','coordinador_general','proveedor','proveedor_rep','proveedor_armas','armas_almacen','armas_operativo','proveedor_otros'], esProveedor:false};
+  if(miRol.tipo==='coordinador') return {puedeRegistrar:true, puedeCompletar:true, gruposAsignables:['subgerente','proveedor','proveedor_rep','proveedor_armas','armas_almacen','armas_operativo','proveedor_otros'], esProveedor:false};
+  if(miRol.tipo==='proveedor') return {puedeRegistrar:false, puedeCompletar:false, gruposAsignables:[], esProveedor:true};
+  return {puedeRegistrar:false, puedeCompletar:false, gruposAsignables:[], esProveedor:false}; // invitado / solo visualizar
+}
+function idsVisiblesParaRol(){
+  if(miRol && miRol.tipo==='proveedor') return idsParaCategoria(miRol.id);
+  return null; // sin restricción
+}
+
+async function cargarRolGuardado(){
+  miRol = lsGet(STORAGE_KEY_ROL) || null;
+}
+async function guardarRol(rol){
+  miRol = rol;
+  lsSet(STORAGE_KEY_ROL, rol);
+}
+
+function mostrarApp(){
+  document.getElementById('roleGate').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  const el = document.getElementById('rolActualLinea');
+  el.innerHTML = `Sesión: <b>${miRol.nombre}</b> · <button class="role-back" id="btnCambiarRol" style="text-decoration:underline;">Cambiar rol</button>`;
+  document.getElementById('btnCambiarRol').addEventListener('click', ()=> mostrarSelectorRol());
+  aplicarVisibilidadPorRol();
+  render();
+}
+
+function mostrarSelectorRol(){
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('roleGate').style.display = 'block';
+  renderRoleGate('inicio');
+}
+
+function renderRoleGate(paso){
+  const gate = document.getElementById('roleGate');
+  if(paso==='inicio'){
+    gate.innerHTML = `
+    <div class="role-gate">
+      <div class="role-card">
+        <h2>¿Quién eres?</h2>
+        <p>Selecciona tu rol para ver el tablero con los permisos que te corresponden. Esto se recuerda en este dispositivo/cuenta.</p>
+        <button class="role-option" data-r="admin"><b>👑 Administrador principal (tú)</b><span>Acceso y edición total. Pide una clave.</span></button>
+        <button class="role-option" data-r="subgerente"><b>Subgerente</b><span>Registra y edita pendientes de coordinadores y proveedores.</span></button>
+        <button class="role-option" data-r="coordinador"><b>Coordinador</b><span>Registra y edita pendientes de subgerentes y proveedores.</span></button>
+        <button class="role-option" data-r="proveedor"><b>Proveedor</b><span>Solo ve su propio apartado: AUTOEXPRESS, SCANIA o HEIL.</span></button>
+        <button class="role-option" data-r="invitado"><b>Solo visualizar</b><span>Puede ver todo el tablero, sin registrar ni editar.</span></button>
+      </div>
+    </div>`;
+    gate.querySelectorAll('.role-option').forEach(b=>b.addEventListener('click', ()=>manejarSeleccionInicial(b.dataset.r)));
+  } else if(paso==='subgerente' || paso==='coordinador'){
+    const grupos = paso==='subgerente' ? ['subgerente'] : ['coordinador','coordinador_general'];
+    const items = PERSONAS.filter(p=>grupos.includes(p.grupo));
+    gate.innerHTML = `
+    <div class="role-gate">
+      <div class="role-card">
+        <button class="role-back" id="rgBack">← Volver</button>
+        <h2>¿Cuál eres?</h2>
+        <p>Elige tu nombre para continuar.</p>
+        ${items.map(p=>`<button class="role-option" data-id="${p.id}"><b>${p.nombre}</b><span>${p.region}</span></button>`).join('')}
+      </div>
+    </div>`;
+    document.getElementById('rgBack').addEventListener('click', ()=>renderRoleGate('inicio'));
+    gate.querySelectorAll('.role-option').forEach(b=>b.addEventListener('click', async ()=>{
+      const p = PERSONAS.find(pp=>pp.id===b.dataset.id);
+      await guardarRol({tipo:paso, id:p.id, nombre:`${p.nombre} (${paso==='subgerente'?'Subgerente':'Coordinador'})`});
+      mostrarApp();
+    }));
+  } else if(paso==='proveedor'){
+    const items = [{id:'autoexpress', nombre:'AUTOEXPRESS'},{id:'scania', nombre:'SCANIA'},{id:'heil', nombre:'HEIL'}];
+    gate.innerHTML = `
+    <div class="role-gate">
+      <div class="role-card">
+        <button class="role-back" id="rgBack">← Volver</button>
+        <h2>¿Qué proveedor eres?</h2>
+        <p>Solo verás la información de tu propio apartado.</p>
+        ${items.map(p=>`<button class="role-option" data-id="${p.id}"><b>${p.nombre}</b></button>`).join('')}
+      </div>
+    </div>`;
+    document.getElementById('rgBack').addEventListener('click', ()=>renderRoleGate('inicio'));
+    gate.querySelectorAll('.role-option').forEach(b=>b.addEventListener('click', async ()=>{
+      const nombre = items.find(p=>p.id===b.dataset.id).nombre;
+      await guardarRol({tipo:'proveedor', id:b.dataset.id, nombre:`${nombre} (Proveedor)`});
+      mostrarApp();
+    }));
+  }
+}
+
+async function manejarSeleccionInicial(tipo){
+  if(tipo==='admin'){ await intentarAdmin(); }
+  else if(tipo==='subgerente' || tipo==='coordinador' || tipo==='proveedor'){ renderRoleGate(tipo); }
+  else{ await guardarRol({tipo:'invitado', id:null, nombre:'Solo visualizar'}); mostrarApp(); }
+}
+
+async function intentarAdmin(){
+  let adminHash = null;
+  try{ adminHash = await apiGet(STORAGE_KEY_ADMIN_PIN); }catch(e){}
+  if(!adminHash){
+    const nueva = await pedirTexto('Crear clave de administrador', 'Aún no existe una clave de administrador principal. Créala ahora (solo tú deberías conocerla).', '', 'password');
+    if(!nueva) return;
+    const confirmacion = await pedirTexto('Confirma tu clave', 'Vuelve a escribirla para confirmar.', '', 'password');
+    if(nueva!==confirmacion){ mostrarToast('Las claves no coinciden. Intenta de nuevo.', 'error'); return; }
+    try{
+      const hash = await sha256Hex(nueva);
+      await apiSet(STORAGE_KEY_ADMIN_PIN, hash);
+      await guardarRol({tipo:'admin', id:null, nombre:'Administrador principal'});
+      mostrarApp();
+    }catch(e){ mostrarToast('⚠ No se pudo crear la clave: ' + (e && e.message ? e.message : 'error desconocido'), 'error'); }
+  }else{
+    const intento = await pedirTexto('Clave de administrador', 'Ingresa la clave de administrador principal.', '', 'password');
+    if(intento===null) return;
+    try{
+      const hash = await sha256Hex(intento);
+      if(hash!==adminHash){ mostrarToast('Clave incorrecta.', 'error'); return; }
+      await guardarRol({tipo:'admin', id:null, nombre:'Administrador principal'});
+      mostrarApp();
+    }catch(e){ mostrarToast('⚠ No se pudo verificar la clave: ' + (e && e.message ? e.message : 'error desconocido'), 'error'); }
+  }
+}
+
+function aplicarVisibilidadPorRol(){
+  const p = permisos();
+  document.getElementById('secRegistrar').style.display = p.puedeRegistrar ? '' : 'none';
+  if(p.esProveedor){
+    document.getElementById('secSubgerentes').style.display = 'none';
+    document.getElementById('secCoordRegion').style.display = 'none';
+    document.getElementById('secCoordGeneral').style.display = 'none';
+    document.getElementById('secResumenCategoria').style.display = 'none';
+    document.getElementById('secMisPendientes').style.display = 'none';
+    document.getElementById('bloqueAutoexpress').style.display = miRol.id==='autoexpress' ? '' : 'none';
+    document.getElementById('bloqueOtrosProveedores').style.display = miRol.id==='autoexpress' ? 'none' : '';
+  }else{
+    document.getElementById('secSubgerentes').style.display = '';
+    document.getElementById('secCoordRegion').style.display = '';
+    document.getElementById('secCoordGeneral').style.display = '';
+    document.getElementById('secResumenCategoria').style.display = '';
+    document.getElementById('secMisPendientes').style.display = '';
+    document.getElementById('bloqueAutoexpress').style.display = '';
+    document.getElementById('bloqueOtrosProveedores').style.display = '';
+  }
+  poblarSelectPersona();
+}
+
+function renderResumenCategoria(){
+  const ids = idsParaCategoria(categoriaResumen);
+  const s = statsForIds(ids, flotaResumen);
+  const cls = s.pct===null ? 'none' : s.pct>=80 ? 'good' : s.pct>=50 ? 'warn' : 'bad';
+  const labels = {total:'Total General', operacion3:'III Servicios Operación', autoexpress:'AUTOEXPRESS', scania:'SCANIA', heil:'HEIL'};
+  const flotaLabel = flotaResumen==='total' ? 'Toda la flota' : OPERACIONES[flotaResumen];
+  document.getElementById('resumenCategoriaCard').innerHTML = `
+    <div class="person-card" style="cursor:default;">
+      <div class="top">
+        <div class="who"><div class="nombre">${labels[categoriaResumen]}</div><div class="rol">${flotaLabel}</div></div>
+      </div>
+      <div class="gauge-row">
+        ${gaugeSVG(s.pct, 96)}
+        <div class="gauge-stats">
+          <div><span class="num" style="color:var(--text)">${s.total}</span><span class="lbl">Total</span></div>
+          <div><span class="num pend">${s.pendientes}</span><span class="lbl">Pend.</span></div>
+          <div><span class="num venc">${s.vencidos}</span><span class="lbl">Venc.</span></div>
+          <div><span class="num" style="color:var(--good)">${s.completados}</span><span class="lbl">OK</span></div>
+        </div>
+      </div>
+      <div class="cumpl-text ${cls}">${s.pct===null?'Sin datos':`<span class="pct-num">${s.pct}%</span> cumplimiento`}</div>
+    </div>`;
+}
+
+function aggregateCardHTML(id, nombre, rolTexto, memberIds){
+  const opSel = opFiltroCard[id] || 'total';
+  const s = statsForIds([id, ...memberIds], opSel);
+  const cls = s.pct===null ? 'none' : s.pct>=80 ? 'good' : s.pct>=50 ? 'warn' : 'bad';
+  const pctTxt = s.pct===null ? 'Sin datos' : `<span class="pct-num">${s.pct}%</span> cumplimiento`;
+  const active = personaSeleccionada===id ? ' active' : '';
+  return `
+  <div class="provider-card${active}" data-id="${id}">
+    <div class="who"><div class="nombre">${nombre}</div><div class="rol">${rolTexto}</div></div>
+    <div class="op-toggle" data-toggle-for="${id}">
+      <span data-op="total" class="${opSel==='total'?'active':''}">Total</span>
+      <span data-op="atum" class="${opSel==='atum'?'active':''}">ATUM</span>
+      <span data-op="atis" class="${opSel==='atis'?'active':''}">ATIS</span>
+    </div>
+    <div class="gauge-row">
+      ${gaugeSVG(s.pct, 72)}
+      <div class="gauge-stats">
+        <div><span class="num pend">${s.pendientes}</span><span class="lbl">Pend.</span></div>
+        <div><span class="num venc">${s.vencidos}</span><span class="lbl">Venc.</span></div>
+        <div><span class="num" style="color:var(--good)">${s.completados}</span><span class="lbl">OK</span></div>
+      </div>
+    </div>
+    <div class="cumpl-text ${cls}">${pctTxt}</div>
+  </div>`;
+}
+
+function render(){
+  document.getElementById('fecha-hoy').textContent = new Date().toLocaleDateString('es-MX', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  renderRecordatorios();
+  renderResumenCategoria();
+
+  // summary (restringido a lo que el rol puede ver)
+  const idsRol = idsVisiblesParaRol();
+  const tareasVisibles = idsRol ? tareas.filter(t=>idsRol.includes(t.personaId)) : tareas;
+  const total = tareasVisibles.length;
+  const completados = tareasVisibles.filter(t=>estadoReal(t)==='completado').length;
+  const vencidos = tareasVisibles.filter(t=>estadoReal(t)==='vencido').length;
+  const pendientes = tareasVisibles.filter(t=>estadoReal(t)==='pendiente').length;
+  document.getElementById('sumTotal').textContent = total;
+  document.getElementById('sumPendientes').textContent = pendientes;
+  document.getElementById('sumVencidos').textContent = vencidos;
+  document.getElementById('sumCumplimiento').textContent = total===0 ? '—' : Math.round((completados/total)*100)+'%';
+
+  // subgerentes
+  const subs = PERSONAS.filter(p=>p.grupo==='subgerente');
+  document.getElementById('subgerentesRow').innerHTML = subs.map(personCardHTML).join('');
+
+  // regiones (coordinadores, con subgerente como referencia)
+  document.getElementById('regionesRow').innerHTML = REGIONES.map(r=>{
+    const p = PERSONAS.find(pp=>pp.id===r.coordinador);
+    return personCardHTML(p).replace('</div>\n    <div class="gauge-row">',
+      `<div style="font-size:10px;color:var(--muted);margin-top:-4px;">Subgerente: ${personaNombre(r.subgerente)}</div></div>\n    <div class="gauge-row">`);
+  }).join('');
+
+  // coordinadores generales (todas las regiones)
+  const generales = PERSONAS.filter(p=>p.grupo==='coordinador_general');
+  document.getElementById('generalesRow').innerHTML = generales.map(personCardHTML).join('');
+
+  // proveedor (agregado: autoexpress general + los representantes por zona/técnicos)
+  const repIds = PERSONAS.filter(p=>p.grupo==='proveedor_rep').map(p=>p.id);
+  document.getElementById('providerRow').innerHTML = aggregateCardHTML('autoexpress', 'AUTOEXPRESS', 'Proveedor externo · todas las zonas y flotas', repIds);
+
+  const reps = PERSONAS.filter(p=>p.grupo==='proveedor_rep');
+  document.getElementById('providerRepsRow').innerHTML = reps.map(personCardHTML).join('');
+
+  // ARMAS (tercero de refaccionamiento): agregado + almacenes + operativos
+  const armasAlmacenIds = PERSONAS.filter(p=>p.grupo==='armas_almacen').map(p=>p.id);
+  const armasOperativoIds = PERSONAS.filter(p=>p.grupo==='armas_operativo').map(p=>p.id);
+  document.getElementById('armasRow').innerHTML = aggregateCardHTML('armas', 'ARMAS', 'Tercero · Refaccionamiento — todas las zonas y flotas', [...armasAlmacenIds, ...armasOperativoIds]);
+
+  const armasAlmacenes = PERSONAS.filter(p=>p.grupo==='armas_almacen');
+  document.getElementById('armasAlmacenesRow').innerHTML = armasAlmacenes.map(personCardHTML).join('');
+
+  const armasOperativos = PERSONAS.filter(p=>p.grupo==='armas_operativo');
+  document.getElementById('armasOperativosRow').innerHTML = armasOperativos.map(personCardHTML).join('');
+
+  let otros = PERSONAS.filter(p=>p.grupo==='proveedor_otros');
+  if(miRol && miRol.tipo==='proveedor' && (miRol.id==='scania' || miRol.id==='heil')){
+    otros = otros.filter(p=>p.id===miRol.id);
+  }
+  document.getElementById('otrosProveedoresRow').innerHTML = otros.map(personCardHTML).join('');
+
+  document.querySelectorAll('.op-toggle span').forEach(sp=>{
+    if(!sp.dataset.op) return;
+    sp.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const cardId = sp.parentElement.dataset.toggleFor;
+      opFiltroCard[cardId] = sp.dataset.op;
+      render();
+    });
+  });
+
+  document.querySelectorAll('.person-card, .provider-card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      personaSeleccionada = el.dataset.id;
+      document.getElementById('fPersona').value = el.dataset.id;
+      filtroPersonaId = el.dataset.id;
+      document.getElementById('filtroPersona').value = el.dataset.id;
+      filtroEstado = 'abiertos';
+      document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      document.querySelector('.chip[data-f="abiertos"]').classList.add('active');
+      render();
+      document.getElementById('tablaWrap').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  renderTabla();
+  renderPersonalLock();
+  renderPersonales();
+}
+
+function filaHTML(t, puedeCompletar){
+  const est = estadoReal(t);
+  const op = t.operacion || 'general';
+  return `<tr>
+    <td data-label="Persona">${personaNombre(t.personaId)}</td>
+    <td data-label="Operación"><span class="op-badge ${op}">${OPERACIONES[op]}</span></td>
+    <td data-label="Pendiente">${t.descripcion}</td>
+    <td data-label="Compromiso" class="mono">${t.fechaCompromiso||'—'}</td>
+    <td data-label="Estado"><span class="estado-badge ${est}">${est}</span></td>
+    <td data-label="Acción">
+      <div class="row-actions">
+        ${est==='completado'
+          ? `<span style="font-size:11px;color:var(--good);">✓ Completado ${t.fechaCompletado?('· '+t.fechaCompletado):''}</span>`
+          : (puedeCompletar ? `<button class="done" data-id="${t.id}" title="Marcar completado">✓ Completar</button>` : '')}
+      </div>
+    </td>
+  </tr>`;
+}
+function tablaHTML(filas, puedeCompletar){
+  if(filas.length===0) return `<div class="empty">Sin pendientes registrados con este filtro.</div>`;
+  return `<table>
+    <thead><tr><th>Persona</th><th>Operación</th><th>Pendiente</th><th>Compromiso</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${filas.map(t=>filaHTML(t,puedeCompletar)).join('')}</tbody>
+  </table>`;
+}
+function wireRowActions(){
+  document.querySelectorAll('.row-actions .done').forEach(b=>b.addEventListener('click', async ()=>{
+    const t = tareas.find(x=>x.id===b.dataset.id);
+    if(t){ t.estado='completado'; t.fechaCompletado=hoy(); await guardar(); render(); }
+  }));
+}
+
+function renderTabla(){
+  let filas = tareas.slice().sort((a,b)=> (b.fechaCreacion||'').localeCompare(a.fechaCreacion||''));
+  if(filtroEstado==='abiertos') filas = filas.filter(t=>estadoReal(t)!=='completado');
+  else if(filtroEstado!=='todos') filas = filas.filter(t=>estadoReal(t)===filtroEstado);
+  if(filtroPersonaId!=='todos') filas = filas.filter(t=>t.personaId===filtroPersonaId);
+  if(filtroOperacion!=='todas') filas = filas.filter(t=> (t.operacion||'general')===filtroOperacion);
+  const idsRol = idsVisiblesParaRol();
+  if(idsRol) filas = filas.filter(t=>idsRol.includes(t.personaId));
+  const puedeCompletar = permisos().puedeCompletar;
+
+  // Los proveedores ya ven solo lo suyo (una sola categoría): lista simple, sin desplegables.
+  if(miRol && miRol.tipo==='proveedor'){
+    document.getElementById('tablaWrap').innerHTML = tablaHTML(filas, puedeCompletar);
+    wireRowActions();
+    return;
+  }
+
+  if(filas.length===0){
+    document.getElementById('tablaWrap').innerHTML = `<div class="empty">Sin pendientes registrados con este filtro.</div>`;
+    return;
+  }
+
+  // Todos los demás roles: agrupado en desplegables por categoría, para no generar un listado interminable.
+  const categorias = [
+    {key:'operacion3', label:'III Servicios — Subgerentes y Coordinadores'},
+    {key:'autoexpress', label:'AUTOEXPRESS'},
+    {key:'scania', label:'SCANIA'},
+    {key:'heil', label:'HEIL'}
+  ];
+  const html = categorias.map(c=>{
+    const ids = idsParaCategoria(c.key);
+    const subset = filas.filter(t=>ids.includes(t.personaId));
+    return `<details class="cat-details">
+      <summary>${c.label} <span class="cat-count">${subset.length}</span></summary>
+      <div class="cat-details-body">${tablaHTML(subset, puedeCompletar)}</div>
+    </details>`;
+  }).join('');
+  document.getElementById('tablaWrap').innerHTML = html;
+  wireRowActions();
+}
+
+function renderPersonalLock(){
+  const lock = document.getElementById('personalLockScreen');
+  const content = document.getElementById('personalContent');
+  if(personalDesbloqueado){
+    lock.innerHTML = '';
+    content.style.display = 'block';
+    return;
+  }
+  content.style.display = 'none';
+  if(!personalPinHash){
+    lock.innerHTML = `
+      <div class="panel personal-panel">
+        <div class="hint" style="margin:0 0 12px;">Esta sección es privada: solo quien configure la clave podrá ver, agregar, editar y borrar estos pendientes. Nadie más los verá.</div>
+        <button class="add-btn" id="btnConfigurarPinPersonal" style="background:#B08CF0;">Configurar mi clave privada</button>
+      </div>`;
+    document.getElementById('btnConfigurarPinPersonal').addEventListener('click', configurarPinPersonal);
+  }else{
+    lock.innerHTML = `
+      <div class="panel personal-panel">
+        <div class="hint" style="margin:0 0 12px;">🔒 Sección privada. Ingresa tu clave para ver y gestionar tus pendientes.</div>
+        <button class="add-btn" id="btnDesbloquearPersonal" style="background:#B08CF0;">Desbloquear</button>
+      </div>`;
+    document.getElementById('btnDesbloquearPersonal').addEventListener('click', desbloquearPersonal);
+  }
+}
+
+async function configurarPinPersonal(){
+  const nueva = await pedirTexto('Crear clave privada', 'Crea tu clave para esta sección (solo tú deberías conocerla).', '', 'password');
+  if(!nueva) return;
+  const confirmacion = await pedirTexto('Confirma tu clave', 'Vuelve a escribirla para confirmar.', '', 'password');
+  if(nueva!==confirmacion){ mostrarToast('Las claves no coinciden. Intenta de nuevo.', 'error'); return; }
+  try{
+    const hash = await sha256Hex(nueva);
+    lsSet(STORAGE_KEY_PERSONAL_PIN, hash);
+    personalPinHash = hash;
+    personalDesbloqueado = true;
+    render();
+  }catch(e){ mostrarToast('⚠ No se pudo crear la clave: ' + (e && e.message ? e.message : 'error desconocido'), 'error'); }
+}
+
+async function desbloquearPersonal(){
+  const intento = await pedirTexto('Clave privada', 'Ingresa tu clave para ver y gestionar tus pendientes.', '', 'password');
+  if(intento===null) return;
+  try{
+    const hash = await sha256Hex(intento);
+    if(hash!==personalPinHash){ mostrarToast('Clave incorrecta.', 'error'); return; }
+    personalDesbloqueado = true;
+    render();
+  }catch(e){ mostrarToast('⚠ No se pudo verificar la clave: ' + (e && e.message ? e.message : 'error desconocido'), 'error'); }
+}
+
+function renderPersonales(){
+  const wrap = document.getElementById('personalListWrap');
+  if(personales.length===0){
+    wrap.innerHTML = `<div class="empty">No tienes pendientes personales registrados.</div>`;
+    return;
+  }
+  const filas = personales.slice().sort((a,b)=> (a.fechaCompromiso||'').localeCompare(b.fechaCompromiso||'')).map(x=>{
+    const est = estadoReal(x);
+    return `<div class="reminder-item">
+      <span class="desc">${x.descripcion}</span>
+      <span class="mono" style="font-size:11.5px;color:var(--muted);">${x.fechaCompromiso||'—'}</span>
+      <span class="estado-badge ${est}">${est}</span>
+      <div class="row-actions">
+        ${est!=='completado' ? `<button class="done-p" data-id="${x.id}">✓ Completar</button>` : ''}
+        <button class="edit-p" data-id="${x.id}">✎ Editar</button>
+        <button class="del-p" data-id="${x.id}">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = filas;
+
+  wrap.querySelectorAll('.done-p').forEach(b=>b.addEventListener('click', async ()=>{
+    const x = personales.find(p=>p.id===b.dataset.id);
+    if(x){ x.estado='completado'; x.fechaCompletado=hoy(); await guardarPersonales(); render(); }
+  }));
+  wrap.querySelectorAll('.edit-p').forEach(b=>b.addEventListener('click', async ()=>{
+    const x = personales.find(p=>p.id===b.dataset.id);
+    if(!x) return;
+    const nuevaDesc = await pedirTexto('Editar pendiente', 'Descripción del pendiente:', x.descripcion, 'text');
+    if(nuevaDesc===null) return;
+    const nuevaFecha = await pedirTexto('Editar fecha', 'Fecha compromiso:', x.fechaCompromiso||hoy(), 'date');
+    if(nuevaFecha===null) return;
+    x.descripcion = nuevaDesc.trim() || x.descripcion;
+    x.fechaCompromiso = nuevaFecha.trim() || x.fechaCompromiso;
+    await guardarPersonales(); render();
+  }));
+  wrap.querySelectorAll('.del-p').forEach(b=>b.addEventListener('click', async ()=>{
+    personales = personales.filter(p=>p.id!==b.dataset.id);
+    await guardarPersonales(); render();
+  }));
+}
+
+document.getElementById('btnBloquearPersonal').addEventListener('click', ()=>{
+  personalDesbloqueado = false;
+  render();
+});
+document.getElementById('pFecha').value = hoy();
+document.getElementById('addBtnPersonal').addEventListener('click', async ()=>{
+  const desc = document.getElementById('pDesc').value.trim();
+  const fecha = document.getElementById('pFecha').value;
+  if(!desc){ document.getElementById('pDesc').focus(); return; }
+  personales.push({
+    id:'P'+Date.now()+Math.floor(Math.random()*1000),
+    descripcion:desc, fechaCreacion:hoy(), fechaCompromiso: fecha||hoy(), estado:'pendiente', fechaCompletado:null
+  });
+  await guardarPersonales();
+  document.getElementById('pDesc').value='';
+  render();
+});
+document.querySelectorAll('.chip[data-f]').forEach(c=>c.addEventListener('click', ()=>{
+  document.querySelectorAll('.chip[data-f]').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); filtroEstado = c.dataset.f; renderTabla();
+}));
+document.querySelectorAll('.cat-chip').forEach(c=>c.addEventListener('click', ()=>{
+  document.querySelectorAll('.cat-chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); categoriaResumen = c.dataset.cat; renderResumenCategoria();
+}));
+document.querySelectorAll('.flota-chip').forEach(c=>c.addEventListener('click', ()=>{
+  document.querySelectorAll('.flota-chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); flotaResumen = c.dataset.flota; renderResumenCategoria();
+}));
+document.getElementById('filtroPersona').addEventListener('change', e=>{
+  filtroPersonaId = e.target.value; renderTabla();
+});
+document.getElementById('filtroOperacion').addEventListener('change', e=>{
+  filtroOperacion = e.target.value; renderTabla();
+});
+
+// poblar selects
+const selPersona = document.getElementById('fPersona');
+const selFiltroPersona = document.getElementById('filtroPersona');
+
+function etiquetaPersona(p){
+  let label = p.nombre;
+  if(p.region && p.region!=='—' && p.region!=='General' && p.region!=='Todas las regiones') label += ' — '+p.region;
+  if(p.opMode==='fixed') label += ' ('+p.opFija.toUpperCase()+')';
+  return label;
+}
+
+// filtroPersona (ver/filtrar bitácora): lista completa siempre, sin restricción por rol
+GRUPOS_ORDEN.forEach(g=>{
+  const items = PERSONAS.filter(p=>p.grupo===g);
+  if(items.length===0) return;
+  const og2 = document.createElement('optgroup'); og2.label = GRUPOS_LABEL[g];
+  items.forEach(p=>{
+    const o2 = document.createElement('option'); o2.value=p.id; o2.textContent = etiquetaPersona(p);
+    og2.appendChild(o2);
+  });
+  selFiltroPersona.appendChild(og2);
+});
+
+// fPersona (a quién se le puede registrar un pendiente): depende del rol activo
+function poblarSelectPersona(){
+  selPersona.innerHTML = '';
+  const perm = permisos();
+  const gruposPermitidos = perm.gruposAsignables;
+  GRUPOS_ORDEN.forEach(g=>{
+    if(gruposPermitidos!=='todos' && !gruposPermitidos.includes(g)) return;
+    const items = PERSONAS.filter(p=>p.grupo===g);
+    if(items.length===0) return;
+    const og1 = document.createElement('optgroup'); og1.label = GRUPOS_LABEL[g];
+    items.forEach(p=>{
+      const o1 = document.createElement('option'); o1.value=p.id; o1.textContent = etiquetaPersona(p);
+      og1.appendChild(o1);
+    });
+    selPersona.appendChild(og1);
+  });
+  if(selPersona.options.length>0){ selPersona.value = selPersona.options[0].value; }
+  actualizarCampoOperacion();
+}
+document.getElementById('fFecha').value = hoy();
+
+function actualizarCampoOperacion(){
+  const p = PERSONAS.find(pp=>pp.id===selPersona.value);
+  const fOp = document.getElementById('fOperacion');
+  if(p && p.opMode==='fixed'){
+    fOp.value = p.opFija; fOp.disabled = true;
+  } else if(p && p.opMode==='none'){
+    fOp.value = 'general'; fOp.disabled = true;
+  } else {
+    fOp.disabled = false;
+  }
+}
+selPersona.addEventListener('change', actualizarCampoOperacion);
+
+// registrar
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const personaId = selPersona.value;
+  const operacion = document.getElementById('fOperacion').value;
+  const desc = document.getElementById('fDesc').value.trim();
+  const fecha = document.getElementById('fFecha').value;
+  if(!desc){ document.getElementById('fDesc').focus(); return; }
+  tareas.push({
+    id: 'T'+Date.now()+Math.floor(Math.random()*1000),
+    personaId, operacion, descripcion: desc, fechaCreacion: hoy(),
+    fechaCompromiso: fecha || hoy(), estado:'pendiente', fechaCompletado:null
+  });
+  await guardar();
+  document.getElementById('fDesc').value='';
+  render();
+});
+
+// dictado por voz
+function setupDictado(micId, textareaId, hintId){
+  const micBtn = document.getElementById(micId);
+  const micHint = document.getElementById(hintId);
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRec){
+    micBtn.style.display = 'none';
+    micHint.textContent = 'El dictado por voz no está disponible en este navegador (funciona en Chrome de escritorio/Android).';
+    return;
+  }
+  const rec = new SpeechRec();
+  rec.lang = 'es-MX'; rec.continuous = false; rec.interimResults = false;
+  let listening = false;
+  micBtn.addEventListener('click', ()=>{
+    if(listening){ rec.stop(); return; }
+    try{ rec.start(); listening = true; micBtn.classList.add('listening'); micHint.textContent = 'Escuchando… habla el pendiente.'; }
+    catch(e){}
+  });
+  rec.onresult = (ev)=>{
+    const texto = ev.results[0][0].transcript;
+    const ta = document.getElementById(textareaId);
+    ta.value = ta.value ? ta.value + ' ' + texto : texto;
+    micHint.textContent = 'Texto capturado. Revisa y presiona el botón de registrar.';
+  };
+  rec.onerror = ()=>{ micHint.textContent = 'No se pudo escuchar. Intenta de nuevo o escribe el pendiente.'; };
+  rec.onend = ()=>{ listening = false; micBtn.classList.remove('listening'); };
+}
+setupDictado('micBtn', 'fDesc', 'micHint');
+setupDictado('micBtnPersonal', 'pDesc', 'micHintPersonal');
+
+function entornoOK(){
+  return typeof API_URL === 'string' && API_URL.indexOf('PEGA_AQUI') === -1 && API_URL.length > 20;
+}
+
+function mostrarErrorEntorno(){
+  document.getElementById('mainContent').style.display = 'none';
+  const gate = document.getElementById('roleGate');
+  gate.style.display = 'block';
+  gate.innerHTML = `
+    <div class="role-gate">
+      <div class="role-card">
+        <h2>⚠ Falta conectar la base de datos</h2>
+        <p>Este tablero necesita la URL de tu Google Apps Script para poder guardar y sincronizar la información entre todos. Todavía no se ha configurado (o se dejó el texto de ejemplo).</p>
+        <p><b>Qué hacer:</b> abre el archivo, busca la línea <code>const API_URL = '...'</code> cerca del inicio del código, y pega ahí la URL de tu Web App de Google Apps Script publicada. Sigue las instrucciones que te compartieron para crear esa conexión con tu Google Sheet.</p>
+        <button class="role-option" id="btnReintentarEntorno" style="text-align:center;"><b>🔄 Ya la configuré, reintentar</b></button>
+      </div>
+    </div>`;
+  document.getElementById('btnReintentarEntorno').addEventListener('click', ()=> location.reload());
+}
+
+document.getElementById('btnActualizar').addEventListener('click', ()=> refrescarDatosCompartidos(false));
+
+// Sondeo automático: como no hay empuje en tiempo real, se revisa cada 20s si alguien más registró algo.
+setInterval(()=> refrescarDatosCompartidos(true), 20000);
+// También al volver a la pestaña, para no esperar el ciclo completo del sondeo.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible') refrescarDatosCompartidos(true);
+});
+
+(async ()=>{
+  if(!entornoOK()){ mostrarErrorEntorno(); return; }
+  await cargarRolGuardado();
+  if(miRol){ mostrarApp(); } else { mostrarSelectorRol(); }
+  await cargar();
+})();
+</script>
+</body>
+</html>
